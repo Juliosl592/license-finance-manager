@@ -20,6 +20,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
+  getAdminUsers(): Promise<User[]>;
   toggleUserAdmin(id: number): Promise<User>;
   deleteUser(id: number): Promise<void>;
 
@@ -147,6 +148,10 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return db.select().from(users);
+  }
+  
+  async getAdminUsers(): Promise<User[]> {
+    return db.select().from(users).where(eq(users.isAdmin, true));
   }
 
   async toggleUserAdmin(id: number): Promise<User> {

@@ -6,6 +6,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
+import { sendWelcomeEmail, sendNewUserAdminNotification } from "./email";
 
 declare global {
   namespace Express {
@@ -83,6 +84,34 @@ export function setupAuth(app: Express) {
         ...req.body,
         password: await hashPassword(req.body.password),
       });
+
+      // Enviar correo de bienvenida al usuario
+      sendWelcomeEmail(user.name, user.username)
+        .then(success => {
+          console.log(`Correo de bienvenida ${success ? 'enviado' : 'falló'} para: ${user.username}`);
+        })
+        .catch(error => {
+          console.error('Error al enviar correo de bienvenida:', error);
+        });
+
+      // Notificar a los administradores sobre el nuevo usuario
+      try {
+        const admins = await storage.getAdminUsers();
+        if (admins && admins.length > 0) {
+          admins.forEach(admin => {
+            sendNewUserAdminNotification(
+              admin.username,
+              user.name,
+              user.username,
+              user.company || 'No especificada'
+            ).catch(error => {
+              console.error(`Error al enviar notificación a admin ${admin.username}:`, error);
+            });
+          });
+        }
+      } catch (error) {
+        console.error('Error al obtener admins para notificación:', error);
+      }
 
       req.login(user, (err) => {
         if (err) return next(err);

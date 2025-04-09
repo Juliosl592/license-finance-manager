@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertFinancingTermSchema, insertHourPackageSchema, insertQuoteSchema } from "@shared/schema";
+import { sendNewQuoteNotification } from "./email";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize the database with seed data if needed
@@ -91,6 +92,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.user.id,
       });
       const newQuote = await storage.createQuote(data);
+      
+      // Generar un número de referencia para la cotización
+      const quoteRef = `COT-${newQuote.id.toString().padStart(5, '0')}`;
+      
+      // Enviar notificación por correo electrónico al usuario
+      // Calcular el monto total para la notificación
+      const totalAmount = data.licenseQty * data.licensePrice;
+      
+      sendNewQuoteNotification(
+        req.user.name,
+        req.user.username,
+        quoteRef,
+        totalAmount
+      ).catch(error => {
+        console.error('Error al enviar notificación de cotización:', error);
+      });
+      
       res.status(201).json(newQuote);
     } catch (error) {
       res.status(400).json({ message: "Invalid data" });
