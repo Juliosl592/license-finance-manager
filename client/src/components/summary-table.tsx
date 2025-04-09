@@ -85,49 +85,104 @@ export default function SummaryTable({
       return;
     }
 
-    // Creamos un div que contendrá la tabla para exportar
+    // Creamos un contenido optimizado para PDF y que quepa en una página
+    const createCompactTable = () => {
+      const licenseRow = `
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #eee;">Licencias de Software</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee;">${licenseQty} licencias x ${formatCurrency(licensePrice)} c/u</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee;">${licenseOption.type === "cash" ? "Contado" : `Financiado (${licenseOption.months} meses, ${licenseOption.rate}%)`}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">${formatCurrency(licenseOption.total)}</td>
+        </tr>
+      `;
+      const hourRow = `
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #eee;">Bolsa de Horas</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee;">${hourOption.packageName} - ${hourOption.hours} horas</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee;">${hourOption.type === "cash" ? "Contado" : `Financiado (${hourOption.months} meses, ${hourOption.rate}%)`}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">${formatCurrency(hourOption.total)}</td>
+        </tr>
+      `;
+      
+      // Calculamos el total mensual si hay financiamiento
+      let monthlyPayment = 0;
+      if (licenseOption.type === "financed") {
+        monthlyPayment += licenseOption.monthly || 0;
+      }
+      if (hourOption.type === "financed") {
+        monthlyPayment += hourOption.monthly || 0;
+      }
+      
+      return `
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 10px;">
+          <thead>
+            <tr style="background-color: #f3f4f6;">
+              <th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Concepto</th>
+              <th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Detalle</th>
+              <th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Modalidad</th>
+              <th style="padding: 8px; text-align: right; border-bottom: 2px solid #ddd;">Precio</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${licenseRow}
+            ${hourRow}
+            <tr style="background-color: #f8fafc;">
+              <td colspan="3" style="padding: 8px; text-align: right; font-weight: bold; border-bottom: 2px solid #ddd;">Total:</td>
+              <td style="padding: 8px; text-align: right; font-weight: bold; border-bottom: 2px solid #ddd; color: #2563eb;">${formatCurrency(finalTotal)}</td>
+            </tr>
+            ${monthlyPayment > 0 ? `
+            <tr style="background-color: #f8fafc;">
+              <td colspan="3" style="padding: 8px; text-align: right; font-weight: bold;">Cuota mensual:</td>
+              <td style="padding: 8px; text-align: right; font-weight: bold; color: #2563eb;">${formatCurrency(monthlyPayment)}/mes</td>
+            </tr>
+            ` : ''}
+          </tbody>
+        </table>
+      `;
+    };
+    
     const exportElement = document.createElement('div');
     exportElement.innerHTML = `
-      <div style="padding: 20px; font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
-        <div style="text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 15px; margin-bottom: 15px;">
-          <h1 style="color: #2563eb; margin-bottom: 5px; font-size: 24px;">Cotización de Licencias y Servicios</h1>
-          <p style="color: #666; margin: 0; font-size: 14px;">Resumen de selección y costos</p>
+      <div style="padding: 15px; font-family: Arial, sans-serif; max-width: 100%; margin: 0 auto; font-size: 10px;">
+        <div style="text-align: center; border-bottom: 1px solid #2563eb; padding-bottom: 10px; margin-bottom: 10px;">
+          <h1 style="color: #2563eb; margin-bottom: 3px; font-size: 18px;">Cotización de Licencias y Servicios</h1>
+          <p style="color: #666; margin: 0; font-size: 12px;">Resumen de selección y costos</p>
         </div>
         
-        <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 12px;">
-          <div>
-            <p style="margin: 5px 0;"><strong>Cliente:</strong> ${user?.name || 'Cliente'}</p>
-            <p style="margin: 5px 0;"><strong>Empresa:</strong> ${user?.company || 'Empresa'}</p>
-            <p style="margin: 5px 0;"><strong>Email:</strong> ${user?.username || 'Sin email'}</p>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 10px;">
+          <div style="width: 48%;">
+            <p style="margin: 3px 0;"><strong>Cliente:</strong> ${user?.name || 'Cliente'}</p>
+            <p style="margin: 3px 0;"><strong>Empresa:</strong> ${user?.company || 'Empresa'}</p>
+            <p style="margin: 3px 0;"><strong>Email:</strong> ${user?.username || 'Sin email'}</p>
           </div>
-          <div>
-            <p style="margin: 5px 0;"><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</p>
-            <p style="margin: 5px 0;"><strong>Referencia:</strong> COT-${new Date().getTime().toString().slice(-6)}</p>
+          <div style="width: 48%; text-align: right;">
+            <p style="margin: 3px 0;"><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</p>
+            <p style="margin: 3px 0;"><strong>Referencia:</strong> COT-${new Date().getTime().toString().slice(-6)}</p>
           </div>
         </div>
         
-        <div style="font-size: 12px;">
-          ${tableRef.current.outerHTML}
+        <div style="margin: 10px 0;">
+          ${createCompactTable()}
         </div>
         
-        <div style="margin-top: 15px; font-size: 10px; color: #666; border-top: 1px solid #eee; padding-top: 10px;">
-          <p style="margin: 5px 0;"><strong>Condiciones:</strong></p>
-          <ul style="padding-left: 20px; margin: 5px 0;">
+        <div style="margin-top: 10px; font-size: 9px; color: #666; border-top: 1px solid #eee; padding-top: 5px;">
+          <p style="margin: 3px 0;"><strong>Condiciones:</strong></p>
+          <ul style="padding-left: 15px; margin: 3px 0;">
             <li>Esta cotización tiene validez por 30 días a partir de la fecha de emisión.</li>
             <li>Los precios incluyen impuestos aplicables según la legislación vigente.</li>
             <li>Las condiciones de financiamiento están sujetas a aprobación crediticia.</li>
           </ul>
-          <p style="margin-top: 10px; text-align: center; font-style: italic;">Gracias por confiar en nuestros servicios.</p>
+          <p style="margin-top: 5px; text-align: center; font-style: italic;">Gracias por confiar en nuestros servicios.</p>
         </div>
       </div>
     `;
 
-    // Configuración para el PDF
+    // Configuración para el PDF - márgenes pequeños y escala reducida para asegurar que quepa en una página
     const opt = {
-      margin: 10,
+      margin: [5, 5, 5, 5], // [top, right, bottom, left]
       filename: `cotizacion_${new Date().getTime()}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: { scale: 1.5 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
