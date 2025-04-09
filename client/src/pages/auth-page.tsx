@@ -11,12 +11,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 const loginSchema = z.object({
-  username: z.string().email("Ingrese un correo electrónico válido").min(1, "El correo electrónico es requerido"),
+  username: z.string().min(1, "El correo electrónico es requerido"),
   password: z.string().min(1, "La contraseña es requerida"),
 });
 
 const registerSchema = z.object({
-  username: z.string().email("Ingrese un correo electrónico válido").min(1, "El correo electrónico es requerido"),
+  username: z.string().min(1, "El correo electrónico es requerido"),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
   name: z.string().min(1, "El nombre es requerido"),
   company: z.string().min(1, "La empresa es requerida"),
