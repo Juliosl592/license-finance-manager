@@ -5,6 +5,9 @@ import { storage } from "./storage";
 import { insertFinancingTermSchema, insertHourPackageSchema, insertQuoteSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize the database with seed data if needed
+  await storage.initializeDatabase();
+
   // Set up authentication routes
   setupAuth(app);
 

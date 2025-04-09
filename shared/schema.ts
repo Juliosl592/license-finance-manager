@@ -1,4 +1,5 @@
 import { pgTable, text, serial, integer, boolean, real, timestamp } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -34,6 +35,17 @@ export const quotes = pgTable("quotes", {
   selectedHourOption: text("selected_hour_option").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const usersRelations = relations(users, ({ many }) => ({
+  quotes: many(quotes),
+}));
+
+export const quotesRelations = relations(quotes, ({ one }) => ({
+  user: one(users, {
+    fields: [quotes.userId],
+    references: [users.id],
+  }),
+}));
 
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({

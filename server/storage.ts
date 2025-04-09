@@ -1,11 +1,18 @@
 import { 
   User, InsertUser, FinancingTerm, InsertFinancingTerm, 
-  HourPackage, InsertHourPackage, Quote, InsertQuote 
+  HourPackage, InsertHourPackage, Quote, InsertQuote,
+  users, financingTerms, hourPackages, quotes
 } from "@shared/schema";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { db } from "./db";
+import { eq, sql, count, desc, and, gte, gt } from "drizzle-orm";
+import { pool } from "./db";
+import { scrypt, randomBytes } from "crypto";
+import { promisify } from "util";
 
-const MemoryStore = createMemoryStore(session);
+const scryptAsync = promisify(scrypt);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   // User management
@@ -46,155 +53,161 @@ export interface IStorage {
 
   // Session store
   sessionStore: any; // Using any to avoid TypeScript errors with session.SessionStore
+  
+  // For database initialization
+  initializeDatabase(): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private financingTerms: Map<number, FinancingTerm>;
-  private hourPackages: Map<number, HourPackage>;
-  private quotes: Map<number, Quote>;
-  private currentUserId: number;
-  private currentFinancingTermId: number;
-  private currentHourPackageId: number;
-  private currentQuoteId: number;
-  sessionStore: any; // Using any to avoid type issues
+// Helper function to hash passwords
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
+
+export class DatabaseStorage implements IStorage {
+  sessionStore: any;
 
   constructor() {
-    this.users = new Map();
-    this.financingTerms = new Map();
-    this.hourPackages = new Map();
-    this.quotes = new Map();
-    this.currentUserId = 1;
-    this.currentFinancingTermId = 1;
-    this.currentHourPackageId = 1;
-    this.currentQuoteId = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000 // 24 hours
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true
     });
+  }
 
-    // Create a hashed password for admin (hardcoded for simplicity)
-    const hashedAdminPassword = "c531cb4716f8d282dd244a0ac349fce59d187a17667bea7363dbd3240a71808b62626661bfdbd7610d56e5a2d77e6b9a5134d72f7c8161ee957ec81d398a033e.472df211a4667b09d34b"; // "admin123" hashed
-    
-    // Seed initial admin user
-    this.createUser({
-      username: "admin@example.com",
-      password: hashedAdminPassword,
-      name: "Administrator",
-      company: "Sistema de Cotización",
-      isAdmin: true
-    });
+  // Initialize the database with seed data if needed
+  async initializeDatabase(): Promise<void> {
+    // Check if there are any users
+    const existingUsers = await db.select({ count: count() }).from(users);
+    const userCount = existingUsers[0].count;
 
-    // Seed financing terms
-    this.createFinancingTerm({ months: 12, rate: 12.5 });
-    this.createFinancingTerm({ months: 24, rate: 14.0 });
-    this.createFinancingTerm({ months: 36, rate: 15.5 });
-    this.createFinancingTerm({ months: 48, rate: 16.8 });
+    // If no users exist, create admin user
+    if (userCount === 0) {
+      console.log("No users found. Creating admin user...");
+      const hashedPassword = await hashPassword("admin123");
+      
+      await db.insert(users).values({
+        username: "admin@example.com",
+        password: hashedPassword,
+        name: "Administrator",
+        company: "Sistema de Cotización",
+        isAdmin: true
+      });
+      console.log("Admin user created.");
+    }
 
-    // Seed hour packages
-    this.createHourPackage({ name: "Básico", hours: 40, price: 2000000 });
-    this.createHourPackage({ name: "Estándar", hours: 80, price: 3800000 });
-    this.createHourPackage({ name: "Profesional", hours: 120, price: 5400000 });
-    this.createHourPackage({ name: "Empresarial", hours: 200, price: 8500000 });
+    // Check if financing terms exist
+    const existingTerms = await db.select({ count: count() }).from(financingTerms);
+    const termCount = existingTerms[0].count;
+
+    // If no terms exist, create default ones
+    if (termCount === 0) {
+      console.log("No financing terms found. Creating default terms...");
+      await db.insert(financingTerms).values([
+        { months: 12, rate: 12.5 },
+        { months: 24, rate: 14.0 },
+        { months: 36, rate: 15.5 },
+        { months: 48, rate: 16.8 }
+      ]);
+      console.log("Default financing terms created.");
+    }
+
+    // Check if hour packages exist
+    const existingPackages = await db.select({ count: count() }).from(hourPackages);
+    const packageCount = existingPackages[0].count;
+
+    // If no packages exist, create default ones
+    if (packageCount === 0) {
+      console.log("No hour packages found. Creating default packages...");
+      await db.insert(hourPackages).values([
+        { name: "Básico", hours: 40, price: 2000000 },
+        { name: "Estándar", hours: 80, price: 3800000 },
+        { name: "Profesional", hours: 120, price: 5400000 },
+        { name: "Empresarial", hours: 200, price: 8500000 }
+      ]);
+      console.log("Default hour packages created.");
+    }
   }
 
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result.length > 0 ? result[0] : undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result.length > 0 ? result[0] : undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const now = new Date();
-    
-    // Create user object without TypeScript type assertions
-    const user = {
-      id,
-      username: insertUser.username,
-      password: insertUser.password,
-      name: insertUser.name,
-      company: insertUser.company,
-      isAdmin: insertUser.isAdmin === undefined ? false : insertUser.isAdmin,
-      createdAt: now
-    };
-    
-    this.users.set(id, user as User);
-    return user as User;
-  }
-
-  async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
-  }
-
-  async toggleUserAdmin(id: number): Promise<User> {
-    const user = this.users.get(id);
-    if (!user) {
-      throw new Error(`User with ID ${id} not found`);
-    }
-    
-    user.isAdmin = !user.isAdmin;
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users);
+  }
+
+  async toggleUserAdmin(id: number): Promise<User> {
+    const currentUser = await this.getUser(id);
+    if (!currentUser) {
+      throw new Error(`User with ID ${id} not found`);
+    }
+    
+    const [updatedUser] = await db
+      .update(users)
+      .set({ isAdmin: !currentUser.isAdmin })
+      .where(eq(users.id, id))
+      .returning();
+      
+    return updatedUser;
+  }
+
   async deleteUser(id: number): Promise<void> {
-    this.users.delete(id);
+    await db.delete(users).where(eq(users.id, id));
   }
 
   // Financing terms methods
   async getAllFinancingTerms(): Promise<FinancingTerm[]> {
-    return Array.from(this.financingTerms.values());
+    return db.select().from(financingTerms);
   }
 
   async createFinancingTerm(term: InsertFinancingTerm): Promise<FinancingTerm> {
-    const id = this.currentFinancingTermId++;
-    const financingTerm: FinancingTerm = { ...term, id };
-    this.financingTerms.set(id, financingTerm);
+    const [financingTerm] = await db.insert(financingTerms).values(term).returning();
     return financingTerm;
   }
 
   async deleteFinancingTerm(id: number): Promise<void> {
-    this.financingTerms.delete(id);
+    await db.delete(financingTerms).where(eq(financingTerms.id, id));
   }
 
   // Hour packages methods
   async getAllHourPackages(): Promise<HourPackage[]> {
-    return Array.from(this.hourPackages.values());
+    return db.select().from(hourPackages);
   }
 
   async createHourPackage(pkg: InsertHourPackage): Promise<HourPackage> {
-    const id = this.currentHourPackageId++;
-    const hourPackage: HourPackage = { ...pkg, id };
-    this.hourPackages.set(id, hourPackage);
+    const [hourPackage] = await db.insert(hourPackages).values(pkg).returning();
     return hourPackage;
   }
 
   async deleteHourPackage(id: number): Promise<void> {
-    this.hourPackages.delete(id);
+    await db.delete(hourPackages).where(eq(hourPackages.id, id));
   }
 
   // Quotes methods
   async createQuote(insertQuote: InsertQuote): Promise<Quote> {
-    const id = this.currentQuoteId++;
-    const now = new Date();
-    const quote: Quote = { ...insertQuote, id, createdAt: now };
-    this.quotes.set(id, quote);
+    const [quote] = await db.insert(quotes).values(insertQuote).returning();
     return quote;
   }
 
   async getQuotesByUserId(userId: number): Promise<Quote[]> {
-    return Array.from(this.quotes.values()).filter(
-      (quote) => quote.userId === userId
-    );
+    return db.select().from(quotes).where(eq(quotes.userId, userId));
   }
 
   async getAllQuotes(): Promise<Quote[]> {
-    return Array.from(this.quotes.values());
+    return db.select().from(quotes);
   }
 
   // Statistics methods
@@ -209,51 +222,58 @@ export class MemStorage implements IStorage {
       lastActivity: string;
     }>;
   }> {
-    const allQuotes = Array.from(this.quotes.values());
-    const allUsers = Array.from(this.users.values());
+    // Get total quotes count
+    const totalQuotesResult = await db.select({ count: count() }).from(quotes);
+    const totalQuotes = Number(totalQuotesResult[0].count) || 0;
     
-    // Calculate active users (users that have created quotes)
-    const activeUserIds = new Set(allQuotes.map(quote => quote.userId));
-    const activeUsers = activeUserIds.size;
+    // Get active users count (users with at least one quote)
+    const activeUsersQuery = sql`SELECT COUNT(DISTINCT user_id) as count FROM quotes`;
+    const activeUsersResult = await db.execute(activeUsersQuery);
+    const activeUsers = Number(activeUsersResult.rows[0]?.count) || 0;
     
-    // Calculate monthly quotes
+    // Get monthly quotes count
     const now = new Date();
     const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-    const monthlyQuotes = allQuotes.filter(quote => quote.createdAt >= oneMonthAgo).length;
+    const monthlyQuotesResult = await db
+      .select({ count: count() })
+      .from(quotes)
+      .where(gte(quotes.createdAt, oneMonthAgo));
+    const monthlyQuotes = Number(monthlyQuotesResult[0].count) || 0;
     
-    // Calculate user statistics
-    const userQuoteCounts = new Map<number, number>();
-    const userLastActivities = new Map<number, Date>();
+    // Get user statistics
+    const userStatsQuery = sql`
+      SELECT 
+        u.name, 
+        u.company, 
+        COUNT(q.id) as quote_count, 
+        MAX(q.created_at::text) as last_activity
+      FROM 
+        users u
+      LEFT JOIN 
+        quotes q ON u.id = q.user_id
+      GROUP BY 
+        u.id
+      HAVING 
+        COUNT(q.id) > 0
+      ORDER BY 
+        COUNT(q.id) DESC
+    `;
     
-    allQuotes.forEach(quote => {
-      // Count quotes per user
-      const currentCount = userQuoteCounts.get(quote.userId) || 0;
-      userQuoteCounts.set(quote.userId, currentCount + 1);
-      
-      // Track last activity
-      const lastActivity = userLastActivities.get(quote.userId);
-      if (!lastActivity || quote.createdAt > lastActivity) {
-        userLastActivities.set(quote.userId, quote.createdAt);
-      }
-    });
-    
-    const userStats = allUsers
-      .filter(user => userQuoteCounts.has(user.id))
-      .map(user => ({
-        name: user.name,
-        company: user.company,
-        quoteCount: userQuoteCounts.get(user.id) || 0,
-        lastActivity: (userLastActivities.get(user.id) || new Date()).toISOString().split('T')[0],
-      }))
-      .sort((a, b) => b.quoteCount - a.quoteCount); // Sort by quote count (descending)
+    const userStatsResult = await db.execute(userStatsQuery);
+    const userStats = userStatsResult.rows.map(row => ({
+      name: row.name as string,
+      company: row.company as string,
+      quoteCount: Number(row.quote_count) || 0,
+      lastActivity: (row.last_activity as string || '').split('T')[0]
+    }));
     
     return {
-      totalQuotes: allQuotes.length,
+      totalQuotes,
       activeUsers,
       monthlyQuotes,
-      userStats,
+      userStats
     };
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
