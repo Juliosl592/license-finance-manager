@@ -88,35 +88,36 @@ export default function SummaryTable({
     // Creamos un div que contendrá la tabla para exportar
     const exportElement = document.createElement('div');
     exportElement.innerHTML = `
-      <div style="padding: 20px; font-family: Arial, sans-serif;">
-        <div style="text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 20px; margin-bottom: 20px;">
-          <h1 style="color: #2563eb; margin-bottom: 5px;">Cotización de Licencias y Servicios</h1>
-          <p style="color: #666; margin: 0;">Resumen de selección y costos</p>
+      <div style="padding: 20px; font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
+        <div style="text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 15px; margin-bottom: 15px;">
+          <h1 style="color: #2563eb; margin-bottom: 5px; font-size: 24px;">Cotización de Licencias y Servicios</h1>
+          <p style="color: #666; margin: 0; font-size: 14px;">Resumen de selección y costos</p>
         </div>
         
-        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 12px;">
           <div>
-            <p><strong>Cliente:</strong> ${user?.name || 'Cliente'}</p>
-            <p><strong>Empresa:</strong> ${user?.company || 'Empresa'}</p>
+            <p style="margin: 5px 0;"><strong>Cliente:</strong> ${user?.name || 'Cliente'}</p>
+            <p style="margin: 5px 0;"><strong>Empresa:</strong> ${user?.company || 'Empresa'}</p>
+            <p style="margin: 5px 0;"><strong>Email:</strong> ${user?.username || 'Sin email'}</p>
           </div>
           <div>
-            <p><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</p>
-            <p><strong>Referencia:</strong> COT-${new Date().getTime().toString().slice(-6)}</p>
+            <p style="margin: 5px 0;"><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</p>
+            <p style="margin: 5px 0;"><strong>Referencia:</strong> COT-${new Date().getTime().toString().slice(-6)}</p>
           </div>
         </div>
         
-        <div>
+        <div style="font-size: 12px;">
           ${tableRef.current.outerHTML}
         </div>
         
-        <div style="margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 20px;">
-          <p><strong>Condiciones:</strong></p>
-          <ul style="padding-left: 20px;">
+        <div style="margin-top: 15px; font-size: 10px; color: #666; border-top: 1px solid #eee; padding-top: 10px;">
+          <p style="margin: 5px 0;"><strong>Condiciones:</strong></p>
+          <ul style="padding-left: 20px; margin: 5px 0;">
             <li>Esta cotización tiene validez por 30 días a partir de la fecha de emisión.</li>
             <li>Los precios incluyen impuestos aplicables según la legislación vigente.</li>
             <li>Las condiciones de financiamiento están sujetas a aprobación crediticia.</li>
           </ul>
-          <p style="margin-top: 20px; text-align: center; font-style: italic;">Gracias por confiar en nuestros servicios.</p>
+          <p style="margin-top: 10px; text-align: center; font-style: italic;">Gracias por confiar en nuestros servicios.</p>
         </div>
       </div>
     `;
@@ -220,7 +221,7 @@ export default function SummaryTable({
               </h3>
               <p className="font-medium text-lg">{user?.name || 'Cliente'}</p>
               <p className="text-gray-700">{user?.company || 'Empresa'}</p>
-              <p className="text-gray-500 text-sm mt-2">{user?.email}</p>
+              <p className="text-gray-500 text-sm mt-2">{user?.username}</p>
             </div>
             
             <div className="rounded-lg border border-gray-100 p-4">

@@ -16,7 +16,7 @@ const loginSchema = z.object({
 });
 
 const registerSchema = z.object({
-  username: z.string().min(1, "El correo electrónico es requerido"),
+  username: z.string().min(1, "El correo electrónico es requerido").email("Ingrese un correo electrónico válido"),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
   name: z.string().min(1, "El nombre es requerido"),
   company: z.string().min(1, "La empresa es requerida"),
