@@ -31,8 +31,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
-      return await res.json();
+      console.log("Attempting login with:", credentials.username);
+      try {
+        const res = await apiRequest("POST", "/api/login", credentials);
+        const userData = await res.json();
+        console.log("Login success, user data:", userData);
+        return userData;
+      } catch (error) {
+        console.error("Login error:", error);
+        throw error;
+      }
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
@@ -42,9 +50,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
+      console.error("Login mutation error:", error);
       toast({
         title: "Login failed",
-        description: "Invalid email or password",
+        description: "Credenciales inválidas. Por favor verifique su correo y contraseña.",
         variant: "destructive",
       });
     },
@@ -52,20 +61,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (credentials: InsertUser) => {
-      const res = await apiRequest("POST", "/api/register", credentials);
-      return await res.json();
+      console.log("Attempting registration with:", credentials.username);
+      try {
+        const res = await apiRequest("POST", "/api/register", credentials);
+        const userData = await res.json();
+        console.log("Registration success, user data:", userData);
+        return userData;
+      } catch (error) {
+        console.error("Registration error:", error);
+        throw error;
+      }
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
       toast({
-        title: "Registration successful",
-        description: `Welcome, ${user.name}!`,
+        title: "Registro exitoso",
+        description: `¡Bienvenido(a), ${user.name}!`,
       });
     },
     onError: (error: Error) => {
+      console.error("Registration mutation error:", error);
       toast({
-        title: "Registration failed",
-        description: error.message,
+        title: "Error en el registro",
+        description: error.message.includes("Email already exists") 
+          ? "Este correo electrónico ya está registrado. Intente iniciar sesión." 
+          : "Hubo un problema con el registro. Por favor intente nuevamente.",
         variant: "destructive",
       });
     },
@@ -73,19 +93,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/logout");
+      console.log("Attempting logout");
+      try {
+        await apiRequest("POST", "/api/logout");
+        console.log("Logout successful");
+      } catch (error) {
+        console.error("Logout error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
       toast({
-        title: "Logged out",
-        description: "You have been successfully logged out",
+        title: "Sesión cerrada",
+        description: "Has cerrado sesión exitosamente",
       });
     },
     onError: (error: Error) => {
+      console.error("Logout mutation error:", error);
+      // Aún así, tratamos de limpiar el estado de usuario en caso de error
+      queryClient.setQueryData(["/api/user"], null);
       toast({
-        title: "Logout failed",
-        description: error.message,
+        title: "Error al cerrar sesión",
+        description: "Hubo un problema al cerrar sesión, pero hemos limpiado tu sesión local.",
         variant: "destructive",
       });
     },

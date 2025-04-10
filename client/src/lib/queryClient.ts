@@ -2,8 +2,15 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    try {
+      // Intentar obtener el texto del error
+      const text = (await res.text()) || res.statusText;
+      console.error(`API Error: ${res.status} - ${text}`);
+      throw new Error(`${res.status}: ${text}`);
+    } catch (err) {
+      console.error(`Failed to parse error response: ${err}`);
+      throw new Error(`${res.status}: ${res.statusText || 'Unknown error'}`);
+    }
   }
 }
 
