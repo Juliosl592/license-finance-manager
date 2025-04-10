@@ -4,7 +4,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/home-page";
-import AuthPage from "@/pages/auth-page";
+import LoginPage from "@/pages/login-page";
+import RegisterPage from "@/pages/register-page";
 import ParametersPage from "@/pages/admin/parameters";
 import UsersPage from "@/pages/admin/users";
 import ReportsPage from "@/pages/admin/reports";
@@ -18,7 +19,14 @@ function Router() {
       <ProtectedRoute path="/admin/parameters" component={ParametersPage} />
       <ProtectedRoute path="/admin/users" component={UsersPage} />
       <ProtectedRoute path="/admin/reports" component={ReportsPage} />
-      <Route path="/auth" component={AuthPage} />
+      <Route path="/login" component={LoginPage} />
+      <Route path="/register" component={RegisterPage} />
+      <Route path="/auth">
+        {() => {
+          window.location.href = "/login";
+          return null;
+        }}
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
