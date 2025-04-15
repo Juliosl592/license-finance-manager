@@ -168,8 +168,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Cannot delete yourself" });
     }
 
-    await storage.deleteUser(id);
-    res.status(200).json({ message: "User deleted" });
+    try {
+      // Verificar si el usuario existe antes de eliminarlo
+      const userToDelete = await storage.getUser(id);
+      if (!userToDelete) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      await storage.deleteUser(id);
+      res.status(200).json({ message: "User deleted" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Error deleting user" });
+    }
   });
 
   // Report statistics (admin only)

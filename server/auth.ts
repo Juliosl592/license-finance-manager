@@ -140,4 +140,20 @@ export function setupAuth(app: Express) {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     res.json(req.user);
   });
+
+  app.post("/api/change-password", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    const { currentPassword, newPassword } = req.body;
+    const user = await storage.getUserByUsername(req.user.username);
+
+    if (!user || !(await comparePasswords(currentPassword, user.password))) {
+      return res.status(401).json({ message: "Contraseña actual incorrecta" });
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+    await storage.updateUserPassword(user.id, hashedPassword);
+    
+    res.status(200).json({ message: "Contraseña actualizada correctamente" });
+  });
 }

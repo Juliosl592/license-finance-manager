@@ -173,6 +173,12 @@ export class DatabaseStorage implements IStorage {
     await db.delete(users).where(eq(users.id, id));
   }
 
+  async updateUserPassword(id: number, hashedPassword: string): Promise<void> {
+    await db.update(users)
+      .set({ password: hashedPassword })
+      .where(eq(users.id, id));
+  }
+
   // Financing terms methods
   async getAllFinancingTerms(): Promise<FinancingTerm[]> {
     return db.select().from(financingTerms);
