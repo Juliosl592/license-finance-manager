@@ -13,7 +13,6 @@ const registerSchema = z.object({
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
   name: z.string().min(1, "El nombre es requerido"),
   company: z.string().min(1, "La empresa es requerida"),
-  isAdmin: z.boolean().default(false),
 });
 
 export default function RegisterPage() {
