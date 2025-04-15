@@ -33,8 +33,8 @@ type HourOption = {
 export default function HomePage() {
   const { user } = useAuth();
   const [calculator, setCalculator] = useState({
-    licenseQty: 1,
-    licensePrice: 500000,
+    licenseQty: '',
+    licensePrice: '',
   });
   const [showResults, setShowResults] = useState(false);
   const [selectedLicenseOption, setSelectedLicenseOption] = useState<string | null>(null);

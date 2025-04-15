@@ -16,7 +16,7 @@ interface CalculatorProps {
 
 export default function Calculator({ calculator, onChange, onCalculate }: CalculatorProps) {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
-    const value = parseInt(e.target.value) || 0;
+    const value = e.target.value === '' ? '' : (parseInt(e.target.value) || 0);
     onChange(key, value);
   };
 
