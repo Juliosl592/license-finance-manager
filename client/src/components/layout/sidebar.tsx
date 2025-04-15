@@ -45,22 +45,15 @@ export default function Sidebar({ activeItem }: SidebarProps) {
           <Link 
             key={item.href}
             href={item.href}
-            onClick={(e) => {
-              e.preventDefault();
-              navigate(item.href);
-            }}
+            className={cn(
+              "block py-3 px-4 text-neutral-400 hover:bg-primary-light hover:bg-opacity-10 hover:text-primary cursor-pointer",
+              item.id === activeItem && "bg-primary-light bg-opacity-10 text-primary border-r-4 border-primary"
+            )}
           >
-            <a 
-              className={cn(
-                "block py-3 px-4 text-neutral-400 hover:bg-primary-light hover:bg-opacity-10 hover:text-primary cursor-pointer",
-                item.id === activeItem && "bg-primary-light bg-opacity-10 text-primary border-r-4 border-primary"
-              )}
-            >
-              <span className="w-6 inline-block">
-                {item.icon}
-              </span>
-              {item.label}
-            </a>
+            <span className="w-6 inline-block">
+              {item.icon}
+            </span>
+            {item.label}
           </Link>
         ))}
       </nav>
