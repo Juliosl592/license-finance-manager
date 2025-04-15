@@ -170,6 +170,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: number): Promise<void> {
+    // Primero eliminamos todas las cotizaciones asociadas al usuario
+    await db.delete(quotes).where(eq(quotes.userId, id));
+    // Luego eliminamos el usuario
     await db.delete(users).where(eq(users.id, id));
   }
 
