@@ -76,7 +76,7 @@ export default function UsersPage() {
     toggleUserRoleMutation.mutate(id);
   };
 
-  const handleDeleteUser = (id: number) => {
+  const handleDeleteUser = async (id: number) => {
     if (currentUser && id === currentUser.id) {
       toast({
         title: "Error",
@@ -85,8 +85,21 @@ export default function UsersPage() {
       });
       return;
     }
+
+    const targetUser = users.find(u => u.id === id);
+    const result = await deleteUserMutation.mutateAsync(id);
     
-    deleteUserMutation.mutate(id);
+    if (result.hasQuotes) {
+      toast({
+        title: "Usuario desactivado",
+        description: `${targetUser?.name} ha sido desactivado. Sus cotizaciones permanecerán en el sistema para fines de reportes.`,
+      });
+    } else {
+      toast({
+        title: "Usuario eliminado",
+        description: "El usuario ha sido eliminado correctamente",
+      });
+    }
   };
 
   return (
