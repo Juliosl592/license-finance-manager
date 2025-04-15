@@ -169,20 +169,11 @@ export class DatabaseStorage implements IStorage {
     return updatedUser;
   }
 
-  async getUserQuotes(id: number): Promise<number> {
-    const result = await db
-      .select({ count: count() })
-      .from(quotes)
-      .where(eq(quotes.userId, id));
-    return Number(result[0].count);
-  }
-
-  async deleteUser(id: number): Promise<{ hasQuotes: boolean }> {
-    const quoteCount = await this.getUserQuotes(id);
-    await db.update(users)
-      .set({ isActive: false })
-      .where(eq(users.id, id));
-    return { hasQuotes: quoteCount > 0 };
+  async deleteUser(id: number): Promise<void> {
+    // Primero eliminamos todas las cotizaciones asociadas al usuario
+    await db.delete(quotes).where(eq(quotes.userId, id));
+    // Luego eliminamos el usuario
+    await db.delete(users).where(eq(users.id, id));
   }
 
   async updateUserPassword(id: number, hashedPassword: string): Promise<void> {
