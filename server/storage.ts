@@ -10,9 +10,16 @@ import { eq, sql, count, desc, and, gte, gt } from "drizzle-orm";
 import { pool } from "./db";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
+import { createTable, integer, serial, text, varchar } from 'drizzle-orm/pg-core';
+import { pgTableCreator } from 'drizzle-orm/pg-core';
 
 const scryptAsync = promisify(scrypt);
 const PostgresSessionStore = connectPg(session);
+
+export const quoteSettings = pgTableCreator('quote_settings')({
+  yearMonth: varchar('6').primaryKey(),
+  currentSequence: integer().notNull()
+})
 
 export interface IStorage {
   // User management
@@ -35,7 +42,7 @@ export interface IStorage {
   deleteHourPackage(id: number): Promise<void>;
 
   // Quotes
-  createQuote(quote: InsertQuote): Promise<Quote>;
+  createQuote(quote: InsertQuote, datePrefix: string): Promise<Quote>;
   getQuotesByUserId(userId: number): Promise<Quote[]>;
   getAllQuotes(): Promise<Quote[]>;
 
@@ -54,7 +61,7 @@ export interface IStorage {
 
   // Session store
   sessionStore: any; // Using any to avoid TypeScript errors with session.SessionStore
-  
+
   // For database initialization
   initializeDatabase(): Promise<void>;
 }
@@ -86,7 +93,7 @@ export class DatabaseStorage implements IStorage {
     if (userCount === 0) {
       console.log("No users found. Creating admin user...");
       const hashedPassword = await hashPassword("admin123");
-      
+
       await db.insert(users).values({
         username: "admin@example.com",
         password: hashedPassword,
@@ -149,7 +156,7 @@ export class DatabaseStorage implements IStorage {
   async getAllUsers(): Promise<User[]> {
     return db.select().from(users);
   }
-  
+
   async getAdminUsers(): Promise<User[]> {
     return db.select().from(users).where(eq(users.isAdmin, true));
   }
@@ -159,13 +166,13 @@ export class DatabaseStorage implements IStorage {
     if (!currentUser) {
       throw new Error(`User with ID ${id} not found`);
     }
-    
+
     const [updatedUser] = await db
       .update(users)
       .set({ isAdmin: !currentUser.isAdmin })
       .where(eq(users.id, id))
       .returning();
-      
+
     return updatedUser;
   }
 
@@ -211,9 +218,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Quotes methods
-  async createQuote(insertQuote: InsertQuote): Promise<Quote> {
-    const [quote] = await db.insert(quotes).values(insertQuote).returning();
-    return quote;
+  async createQuote(data: InsertQuote, datePrefix: string): Promise<Quote> {
+    // Obtener o crear la secuencia para el mes actual
+    const yearMonth = datePrefix.slice(0, 6);
+
+    const [currentSettings] = await db
+      .select()
+      .from(quoteSettings)
+      .where(eq(quoteSettings.yearMonth, yearMonth));
+
+    let sequence = 1;
+    if (currentSettings) {
+      sequence = currentSettings.currentSequence + 1;
+      await db
+        .update(quoteSettings)
+        .set({ currentSequence: sequence })
+        .where(eq(quoteSettings.yearMonth, yearMonth));
+    } else {
+      await db.insert(quoteSettings).values({
+        yearMonth,
+        currentSequence: sequence,
+      });
+    }
+
+    const quoteNumber = `${datePrefix}-${sequence}`;
+    const result = await db
+      .insert(quotes)
+      .values({
+        ...data,
+        quoteNumber,
+      })
+      .returning();
+
+    return result[0];
   }
 
   async getQuotesByUserId(userId: number): Promise<Quote[]> {
@@ -239,12 +276,12 @@ export class DatabaseStorage implements IStorage {
     // Get total quotes count
     const totalQuotesResult = await db.select({ count: count() }).from(quotes);
     const totalQuotes = Number(totalQuotesResult[0].count) || 0;
-    
+
     // Get active users count (users with at least one quote)
     const activeUsersQuery = sql`SELECT COUNT(DISTINCT user_id) as count FROM quotes`;
     const activeUsersResult = await db.execute(activeUsersQuery);
     const activeUsers = Number(activeUsersResult.rows[0]?.count) || 0;
-    
+
     // Get monthly quotes count
     const now = new Date();
     const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
@@ -253,7 +290,7 @@ export class DatabaseStorage implements IStorage {
       .from(quotes)
       .where(gte(quotes.createdAt, oneMonthAgo));
     const monthlyQuotes = Number(monthlyQuotesResult[0].count) || 0;
-    
+
     // Get user statistics
     const userStatsQuery = sql`
       SELECT 
@@ -272,7 +309,7 @@ export class DatabaseStorage implements IStorage {
       ORDER BY 
         COUNT(q.id) DESC
     `;
-    
+
     const userStatsResult = await db.execute(userStatsQuery);
     const userStats = userStatsResult.rows.map(row => ({
       name: row.name as string,
@@ -280,7 +317,7 @@ export class DatabaseStorage implements IStorage {
       quoteCount: Number(row.quote_count) || 0,
       lastActivity: (row.last_activity as string || '').split('T')[0]
     }));
-    
+
     return {
       totalQuotes,
       activeUsers,

@@ -23,14 +23,21 @@ export const hourPackages = pgTable("hour_packages", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   hours: integer("hours").notNull(),
-  price: integer("price").notNull(),
+  price: real("price").notNull(),
+});
+
+export const quoteSettings = pgTable("quote_settings", {
+  id: serial("id").primaryKey(),
+  currentSequence: integer("current_sequence").notNull().default(1),
+  yearMonth: text("year_month").notNull().unique(),
 });
 
 export const quotes = pgTable("quotes", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
+  quoteNumber: text("quote_number").notNull().unique(),
   licenseQty: integer("license_qty").notNull(),
-  licensePrice: integer("license_price").notNull(),
+  licensePrice: real("license_price").notNull(), // Cambiado a real para USD
   selectedLicenseOption: text("selected_license_option").notNull(),
   selectedHourOption: text("selected_hour_option").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

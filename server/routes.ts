@@ -91,10 +91,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId: req.user.id,
       });
-      const newQuote = await storage.createQuote(data);
       
-      // Generar un número de referencia para la cotización
-      const quoteRef = `COT-${newQuote.id.toString().padStart(5, '0')}`;
+      // Generar número de cotización con formato YYYYMMDD-N
+      const today = new Date();
+      const yearMonth = today.toISOString().slice(0, 7).replace('-', '');
+      const datePrefix = today.toISOString().slice(0, 10).replace(/-/g, '');
+      
+      const newQuote = await storage.createQuote(data, datePrefix);
+      const quoteRef = newQuote.quoteNumber;
       
       // Enviar notificación por correo electrónico al usuario
       // Calcular el monto total para la notificación
