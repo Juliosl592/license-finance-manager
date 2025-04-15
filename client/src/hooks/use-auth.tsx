@@ -51,9 +51,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onError: (error: Error) => {
       console.error("Login mutation error:", error);
+      const errorMessage = error.message || '';
+      
+      let title = "Error de inicio de sesión";
+      let description = "Ha ocurrido un error. Por favor intente nuevamente.";
+
+      if (errorMessage.includes("401")) {
+        title = "Credenciales inválidas";
+        description = "El usuario o contraseña son incorrectos. Por favor verifique sus datos.";
+      } else if (errorMessage.includes("404")) {
+        title = "Usuario no encontrado";
+        description = "Este usuario no está registrado en el sistema. Por favor regístrese primero.";
+      }
+
       toast({
-        title: "Login failed",
-        description: "Credenciales inválidas. Por favor verifique su correo y contraseña.",
+        title,
+        description,
         variant: "destructive",
       });
     },
