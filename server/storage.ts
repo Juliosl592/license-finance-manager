@@ -10,8 +10,7 @@ import { eq, sql, count, desc, and, gte, gt } from "drizzle-orm";
 import { pool } from "./db";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
-import { createTable, integer, serial, text, varchar } from 'drizzle-orm/pg-core';
-import { pgTableCreator } from 'drizzle-orm/pg-core';
+import { integer, serial, text, varchar, pgTable } from 'drizzle-orm/pg-core';
 
 const scryptAsync = promisify(scrypt);
 const PostgresSessionStore = connectPg(session);
