@@ -253,10 +253,10 @@ export default function ParametersPage() {
                 />
               </div>
               <Button 
-                onClick={handleAddTerm}
-                disabled={addTermMutation.isPending}
+                onClick={handleSaveTerm}
+                disabled={addOrUpdateTermMutation.isPending}
               >
-                {addTermMutation.isPending ? "Agregando..." : "Agregar Plazo"}
+                {addOrUpdateTermMutation.isPending ? "Agregando..." : "Agregar Plazo"}
               </Button>
             </div>
           </CardContent>
