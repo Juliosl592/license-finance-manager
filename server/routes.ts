@@ -197,6 +197,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(stats);
   });
 
+  // Quote settings endpoints
+  app.get("/api/quote-settings", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.isAdmin) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    const currentSettings = await storage.getCurrentQuoteSettings();
+    res.json(currentSettings);
+  });
+
+  app.patch("/api/quote-settings", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.isAdmin) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const { exchangeRate } = req.body;
+      const updatedSettings = await storage.updateQuoteSettings({ exchangeRate });
+      res.json(updatedSettings);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

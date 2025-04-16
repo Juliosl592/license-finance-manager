@@ -217,28 +217,46 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Quotes methods
-  async createQuote(data: InsertQuote, datePrefix: string): Promise<Quote> {
-    // Obtener o crear la secuencia para el mes actual
-    const yearMonth = datePrefix.slice(0, 6);
-
-    const [currentSettings] = await db
+  async getCurrentQuoteSettings() {
+    const today = new Date();
+    const yearMonth = today.toISOString().slice(0, 7).replace('-', '');
+    
+    const [settings] = await db
       .select()
       .from(quoteSettings)
       .where(eq(quoteSettings.yearMonth, yearMonth));
 
-    let sequence = 1;
-    if (currentSettings) {
-      sequence = currentSettings.currentSequence + 1;
-      await db
-        .update(quoteSettings)
-        .set({ currentSequence: sequence })
-        .where(eq(quoteSettings.yearMonth, yearMonth));
-    } else {
-      await db.insert(quoteSettings).values({
+    if (!settings) {
+      return await db.insert(quoteSettings).values({
         yearMonth,
-        currentSequence: sequence,
-      });
+        currentSequence: 1,
+        currency: "USD",
+        exchangeRate: 1.0
+      }).returning();
     }
+
+    return settings;
+  }
+
+  async updateQuoteSettings(data: Partial<typeof quoteSettings.$inferSelect>) {
+    const today = new Date();
+    const yearMonth = today.toISOString().slice(0, 7).replace('-', '');
+    
+    const [settings] = await db
+      .update(quoteSettings)
+      .set(data)
+      .where(eq(quoteSettings.yearMonth, yearMonth))
+      .returning();
+
+    return settings;
+  }
+
+  async createQuote(data: InsertQuote, datePrefix: string): Promise<Quote> {
+    const yearMonth = datePrefix.slice(0, 6);
+    const settings = await this.getCurrentQuoteSettings();
+
+    const sequence = settings.currentSequence + 1;
+    await this.updateQuoteSettings({ currentSequence: sequence });
 
     const quoteNumber = `${datePrefix}-${sequence}`;
     const result = await db

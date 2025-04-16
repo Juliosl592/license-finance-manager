@@ -27,9 +27,10 @@ export const hourPackages = pgTable("hour_packages", {
 });
 
 export const quoteSettings = pgTable("quote_settings", {
-  id: serial("id").primaryKey(),
+  yearMonth: text("year_month").primaryKey(),
   currentSequence: integer("current_sequence").notNull().default(1),
-  yearMonth: text("year_month").notNull().unique(),
+  currency: text("currency").notNull().default("USD"),
+  exchangeRate: real("exchange_rate").notNull().default(1.0)
 });
 
 export const quotes = pgTable("quotes", {
