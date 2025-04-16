@@ -3,8 +3,6 @@ import sgMail from '@sendgrid/mail';
 // Inicializar SendGrid con la API key
 if (!process.env.SENDGRID_API_KEY) {
   console.warn('SENDGRID_API_KEY no está configurada. Los correos no se enviarán.');
-} else if (!process.env.SENDGRID_API_KEY.startsWith('SG.')) {
-  console.warn('SENDGRID_API_KEY inválida. Debe comenzar con "SG.". Los correos no se enviarán.');
 } else {
   try {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
