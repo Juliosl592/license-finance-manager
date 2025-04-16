@@ -33,9 +33,22 @@ export default function ParametersPage() {
   });
 
   // Add financing term mutation
-  const addTermMutation = useMutation({
-    mutationFn: async (term: { months: number; rate: number }) => {
-      const res = await apiRequest("POST", "/api/financing-terms", term);
+  const [editingTerm, setEditingTerm] = useState<{ id?: number; months: string; rate: string }>({
+    months: "",
+    rate: ""
+  });
+  
+  const [editingPackage, setEditingPackage] = useState<{ id?: number; name: string; hours: string; price: string }>({
+    name: "",
+    hours: "",
+    price: ""
+  });
+
+  const addOrUpdateTermMutation = useMutation({
+    mutationFn: async (term: { id?: number; months: number; rate: number }) => {
+      const method = term.id ? "PUT" : "POST";
+      const url = term.id ? `/api/financing-terms/${term.id}` : "/api/financing-terms";
+      const res = await apiRequest(method, url, term);
       return await res.json();
     },
     onSuccess: () => {
@@ -120,9 +133,9 @@ export default function ParametersPage() {
     },
   });
 
-  const handleAddTerm = () => {
-    const months = parseInt(newTerm.months);
-    const rate = parseFloat(newTerm.rate);
+  const handleSaveTerm = () => {
+    const months = parseInt(editingTerm.months);
+    const rate = parseFloat(editingTerm.rate);
     
     if (isNaN(months) || isNaN(rate) || months <= 0 || rate <= 0) {
       toast({
@@ -133,7 +146,20 @@ export default function ParametersPage() {
       return;
     }
     
-    addTermMutation.mutate({ months, rate });
+    addOrUpdateTermMutation.mutate({ 
+      id: editingTerm.id,
+      months, 
+      rate 
+    });
+    setEditingTerm({ months: "", rate: "" });
+  };
+
+  const handleEditTerm = (term: FinancingTerm) => {
+    setEditingTerm({
+      id: term.id,
+      months: term.months.toString(),
+      rate: term.rate.toString()
+    });
   };
 
   const handleDeleteTerm = (id: number) => {

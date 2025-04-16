@@ -198,6 +198,15 @@ export class DatabaseStorage implements IStorage {
     return financingTerm;
   }
 
+  async updateFinancingTerm(id: number, term: InsertFinancingTerm): Promise<FinancingTerm> {
+    const [updatedTerm] = await db
+      .update(financingTerms)
+      .set(term)
+      .where(eq(financingTerms.id, id))
+      .returning();
+    return updatedTerm;
+  }
+
   async deleteFinancingTerm(id: number): Promise<void> {
     await db.delete(financingTerms).where(eq(financingTerms.id, id));
   }

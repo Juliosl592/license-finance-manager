@@ -32,6 +32,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/financing-terms/:id", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.isAdmin) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid ID" });
+    }
+
+    try {
+      const data = insertFinancingTermSchema.parse(req.body);
+      const updatedTerm = await storage.updateFinancingTerm(id, data);
+      res.json(updatedTerm);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid data" });
+    }
+  });
+
   app.delete("/api/financing-terms/:id", async (req, res) => {
     if (!req.isAuthenticated() || !req.user.isAdmin) {
       return res.status(403).json({ message: "Unauthorized" });
