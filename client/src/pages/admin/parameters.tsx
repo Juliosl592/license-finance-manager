@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -12,11 +13,12 @@ import AdminLayout from "@/components/layout/admin-layout";
 
 export default function ParametersPage() {
   const { toast } = useToast();
-  const [newTerm, setNewTerm] = useState<{ months: string; rate: string }>({
+  const [editingTerm, setEditingTerm] = useState<{ id?: number; months: string; rate: string }>({
     months: "",
     rate: "",
   });
-  const [newPackage, setNewPackage] = useState<{ name: string; hours: string; price: string }>({
+
+  const [editingPackage, setEditingPackage] = useState<{ id?: number; name: string; hours: string; price: string }>({
     name: "",
     hours: "",
     price: "",
@@ -32,18 +34,7 @@ export default function ParametersPage() {
     queryKey: ["/api/hour-packages"],
   });
 
-  // Add financing term mutation
-  const [editingTerm, setEditingTerm] = useState<{ id?: number; months: string; rate: string }>({
-    months: "",
-    rate: ""
-  });
-  
-  const [editingPackage, setEditingPackage] = useState<{ id?: number; name: string; hours: string; price: string }>({
-    name: "",
-    hours: "",
-    price: ""
-  });
-
+  // Add/Update financing term mutation
   const addOrUpdateTermMutation = useMutation({
     mutationFn: async (term: { id?: number; months: number; rate: number }) => {
       const method = term.id ? "PUT" : "POST";
@@ -53,16 +44,16 @@ export default function ParametersPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/financing-terms"] });
-      setNewTerm({ months: "", rate: "" });
+      setEditingTerm({ months: "", rate: "" });
       toast({
-        title: "Plazo agregado",
-        description: "El plazo de financiamiento ha sido agregado correctamente",
+        title: "¡Éxito!",
+        description: "El plazo de financiamiento ha sido guardado correctamente",
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "No se pudo agregar el plazo de financiamiento",
+        description: "No se pudo guardar el plazo de financiamiento",
         variant: "destructive",
       });
     },
@@ -89,24 +80,26 @@ export default function ParametersPage() {
     },
   });
 
-  // Add hour package mutation
-  const addPackageMutation = useMutation({
-    mutationFn: async (pkg: { name: string; hours: number; price: number }) => {
-      const res = await apiRequest("POST", "/api/hour-packages", pkg);
+  // Add/Update hour package mutation
+  const addOrUpdatePackageMutation = useMutation({
+    mutationFn: async (pkg: { id?: number; name: string; hours: number; price: number }) => {
+      const method = pkg.id ? "PUT" : "POST";
+      const url = pkg.id ? `/api/hour-packages/${pkg.id}` : "/api/hour-packages";
+      const res = await apiRequest(method, url, pkg);
       return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hour-packages"] });
-      setNewPackage({ name: "", hours: "", price: "" });
+      setEditingPackage({ name: "", hours: "", price: "" });
       toast({
-        title: "Bolsa de horas agregada",
-        description: "La bolsa de horas ha sido agregada correctamente",
+        title: "¡Éxito!",
+        description: "La bolsa de horas ha sido guardada correctamente",
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "No se pudo agregar la bolsa de horas",
+        description: "No se pudo guardar la bolsa de horas",
         variant: "destructive",
       });
     },
@@ -151,7 +144,27 @@ export default function ParametersPage() {
       months, 
       rate 
     });
-    setEditingTerm({ months: "", rate: "" });
+  };
+
+  const handleSavePackage = () => {
+    const hours = parseInt(editingPackage.hours);
+    const price = parseInt(editingPackage.price);
+    
+    if (!editingPackage.name || isNaN(hours) || isNaN(price) || hours <= 0 || price <= 0) {
+      toast({
+        title: "Error",
+        description: "Los valores ingresados no son válidos",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    addOrUpdatePackageMutation.mutate({ 
+      id: editingPackage.id,
+      name: editingPackage.name,
+      hours,
+      price,
+    });
   };
 
   const handleEditTerm = (term: FinancingTerm) => {
@@ -162,32 +175,13 @@ export default function ParametersPage() {
     });
   };
 
-  const handleDeleteTerm = (id: number) => {
-    deleteTermMutation.mutate(id);
-  };
-
-  const handleAddPackage = () => {
-    const hours = parseInt(newPackage.hours);
-    const price = parseInt(newPackage.price);
-    
-    if (!newPackage.name || isNaN(hours) || isNaN(price) || hours <= 0 || price <= 0) {
-      toast({
-        title: "Error",
-        description: "Los valores ingresados no son válidos",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    addPackageMutation.mutate({ 
-      name: newPackage.name,
-      hours,
-      price,
+  const handleEditPackage = (pkg: HourPackage) => {
+    setEditingPackage({
+      id: pkg.id,
+      name: pkg.name,
+      hours: pkg.hours.toString(),
+      price: pkg.price.toString()
     });
-  };
-
-  const handleDeletePackage = (id: number) => {
-    deletePackageMutation.mutate(id);
   };
 
   return (
@@ -212,7 +206,16 @@ export default function ParametersPage() {
                     <tr key={term.id}>
                       <td className="px-6 py-4 whitespace-nowrap">{term.months}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{term.rate}%</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap space-x-2">
+                        <Button 
+                          variant="ghost"
+                          className="text-blue-500 hover:text-blue-700 p-2"
+                          onClick={() => handleEditTerm(term)}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </Button>
                         <Button 
                           variant="ghost" 
                           className="text-red-500 hover:text-red-700 p-2"
@@ -232,31 +235,31 @@ export default function ParametersPage() {
             
             <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
               <div>
-                <Label htmlFor="new-term-months">Plazo (meses)</Label>
+                <Label htmlFor="term-months">Plazo (meses)</Label>
                 <Input 
-                  id="new-term-months" 
+                  id="term-months" 
                   type="number" 
                   min="1"
-                  value={newTerm.months}
-                  onChange={(e) => setNewTerm({ ...newTerm, months: e.target.value })}
+                  value={editingTerm.months}
+                  onChange={(e) => setEditingTerm({ ...editingTerm, months: e.target.value })}
                 />
               </div>
               <div>
-                <Label htmlFor="new-term-rate">Tasa EA (%)</Label>
+                <Label htmlFor="term-rate">Tasa EA (%)</Label>
                 <Input 
-                  id="new-term-rate" 
+                  id="term-rate" 
                   type="number"
                   min="0"
                   step="0.01"
-                  value={newTerm.rate}
-                  onChange={(e) => setNewTerm({ ...newTerm, rate: e.target.value })}
+                  value={editingTerm.rate}
+                  onChange={(e) => setEditingTerm({ ...editingTerm, rate: e.target.value })}
                 />
               </div>
               <Button 
                 onClick={handleSaveTerm}
                 disabled={addOrUpdateTermMutation.isPending}
               >
-                {addOrUpdateTermMutation.isPending ? "Agregando..." : "Agregar Plazo"}
+                {editingTerm.id ? "Actualizar Plazo" : "Agregar Plazo"}
               </Button>
             </div>
           </CardContent>
@@ -283,7 +286,16 @@ export default function ParametersPage() {
                       <td className="px-6 py-4 whitespace-nowrap">{pkg.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{pkg.hours}</td>
                       <td className="px-6 py-4 whitespace-nowrap font-mono">{formatCurrency(pkg.price)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap space-x-2">
+                        <Button 
+                          variant="ghost"
+                          className="text-blue-500 hover:text-blue-700 p-2"
+                          onClick={() => handleEditPackage(pkg)}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </Button>
                         <Button 
                           variant="ghost" 
                           className="text-red-500 hover:text-red-700 p-2"
@@ -303,39 +315,39 @@ export default function ParametersPage() {
             
             <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
               <div>
-                <Label htmlFor="new-package-name">Nombre</Label>
+                <Label htmlFor="package-name">Nombre</Label>
                 <Input 
-                  id="new-package-name" 
-                  value={newPackage.name}
-                  onChange={(e) => setNewPackage({ ...newPackage, name: e.target.value })}
+                  id="package-name" 
+                  value={editingPackage.name}
+                  onChange={(e) => setEditingPackage({ ...editingPackage, name: e.target.value })}
                 />
               </div>
               <div>
-                <Label htmlFor="new-package-hours">Horas</Label>
+                <Label htmlFor="package-hours">Horas</Label>
                 <Input 
-                  id="new-package-hours" 
+                  id="package-hours" 
                   type="number"
                   min="1"
-                  value={newPackage.hours}
-                  onChange={(e) => setNewPackage({ ...newPackage, hours: e.target.value })}
+                  value={editingPackage.hours}
+                  onChange={(e) => setEditingPackage({ ...editingPackage, hours: e.target.value })}
                 />
               </div>
               <div>
-                <Label htmlFor="new-package-price">Precio Base</Label>
+                <Label htmlFor="package-price">Precio Base</Label>
                 <Input 
-                  id="new-package-price" 
+                  id="package-price" 
                   type="number"
                   min="0"
                   step="1000"
-                  value={newPackage.price}
-                  onChange={(e) => setNewPackage({ ...newPackage, price: e.target.value })}
+                  value={editingPackage.price}
+                  onChange={(e) => setEditingPackage({ ...editingPackage, price: e.target.value })}
                 />
               </div>
               <Button 
-                onClick={handleAddPackage}
-                disabled={addPackageMutation.isPending}
+                onClick={handleSavePackage}
+                disabled={addOrUpdatePackageMutation.isPending}
               >
-                {addPackageMutation.isPending ? "Agregando..." : "Agregar Bolsa de Horas"}
+                {editingPackage.id ? "Actualizar Bolsa" : "Agregar Bolsa"}
               </Button>
             </div>
           </CardContent>
