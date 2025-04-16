@@ -16,10 +16,10 @@ import { pgTableCreator } from 'drizzle-orm/pg-core';
 const scryptAsync = promisify(scrypt);
 const PostgresSessionStore = connectPg(session);
 
-export const quoteSettings = pgTableCreator('quote_settings')({
-  yearMonth: varchar('6').primaryKey(),
-  currentSequence: integer().notNull()
-})
+export const quoteSettings = pgTable("quote_settings", {
+  yearMonth: varchar("year_month", { length: 6 }).primaryKey(),
+  currentSequence: integer("current_sequence").notNull()
+});
 
 export interface IStorage {
   // User management
