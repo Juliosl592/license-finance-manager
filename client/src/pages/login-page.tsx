@@ -14,7 +14,7 @@ const loginSchema = z.object({
 });
 
 export default function LoginPage() {
-  const { user, loginMutation } = useAuth();
+  const { user, login } = useAuth();
   const [, navigate] = useLocation();
 
   // Redirect if already logged in
@@ -34,9 +34,13 @@ export default function LoginPage() {
   });
 
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
-    await loginMutation.mutateAsync(values);
+    try {
+      await login(values.username, values.password);
+    } catch (error) {
+      console.error("Login failed", error);
+    }
   };
-  
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-neutral-100">
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -45,7 +49,7 @@ export default function LoginPage() {
             <h1 className="text-2xl font-bold text-primary mb-2">Sistema de Cotización</h1>
             <p className="text-muted-foreground">Ingrese sus credenciales para continuar</p>
           </div>
-          
+
           <Form {...loginForm}>
             <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
               <FormField
@@ -61,7 +65,7 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={loginForm.control}
                 name="password"
@@ -79,13 +83,12 @@ export default function LoginPage() {
               <Button 
                 type="submit" 
                 className="w-full bg-primary text-white"
-                disabled={loginMutation.isPending}
               >
-                {loginMutation.isPending ? "Iniciando sesión..." : "Iniciar Sesión"}
+                Iniciar Sesión
               </Button>
             </form>
           </Form>
-          
+
           <div className="mt-6 text-center">
             <p className="text-muted-foreground">
               ¿No tiene una cuenta?{" "}
@@ -95,7 +98,7 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
-        
+
         <div className="hidden md:flex md:flex-col p-6 bg-gradient-to-br from-primary to-primary-dark text-white rounded-lg shadow-lg justify-center">
           <h2 className="text-3xl font-bold mb-4">Sistema de Cotización de Licencias</h2>
           <p className="mb-6 text-lg opacity-90">

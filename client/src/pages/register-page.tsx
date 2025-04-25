@@ -16,7 +16,7 @@ const registerSchema = z.object({
 });
 
 export default function RegisterPage() {
-  const { user, registerMutation } = useAuth();
+  const { user, register } = useAuth();
   const [, navigate] = useLocation();
 
   // Redirect if already logged in
@@ -34,14 +34,17 @@ export default function RegisterPage() {
       password: "",
       name: "",
       company: "",
-      isAdmin: false,
     },
   });
 
   const onRegisterSubmit = async (values: z.infer<typeof registerSchema>) => {
-    await registerMutation.mutateAsync(values);
+    try {
+      await register(values.username, values.password);
+    } catch (error) {
+      console.error("Registration failed", error);
+    }
   };
-  
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-neutral-100">
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -50,7 +53,7 @@ export default function RegisterPage() {
             <h1 className="text-2xl font-bold text-primary mb-2">Crear Cuenta</h1>
             <p className="text-muted-foreground">Complete el formulario para registrarse</p>
           </div>
-          
+
           <Form {...registerForm}>
             <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
               <FormField
@@ -70,7 +73,7 @@ export default function RegisterPage() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={registerForm.control}
                 name="username"
@@ -88,7 +91,7 @@ export default function RegisterPage() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={registerForm.control}
                 name="company"
@@ -106,7 +109,7 @@ export default function RegisterPage() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={registerForm.control}
                 name="password"
@@ -127,13 +130,12 @@ export default function RegisterPage() {
               <Button 
                 type="submit" 
                 className="w-full bg-primary text-white"
-                disabled={registerMutation.isPending}
               >
-                {registerMutation.isPending ? "Registrando..." : "Registrarse"}
+                Registrarse
               </Button>
             </form>
           </Form>
-          
+
           <div className="mt-6 text-center">
             <p className="text-muted-foreground">
               ¿Ya tiene una cuenta?{" "}
@@ -143,7 +145,7 @@ export default function RegisterPage() {
             </p>
           </div>
         </div>
-        
+
         <div className="hidden md:flex md:flex-col p-6 bg-gradient-to-br from-primary to-primary-dark text-white rounded-lg shadow-lg justify-center">
           <h2 className="text-3xl font-bold mb-4">Únase a Nuestro Sistema</h2>
           <p className="mb-6 text-lg opacity-90">

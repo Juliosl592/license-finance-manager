@@ -1,0 +1,25 @@
+[debug] [2025-04-25T16:58:38.068Z] ----------------------------------------------------------------------
+[debug] [2025-04-25T16:58:38.071Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\licen\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init
+[debug] [2025-04-25T16:58:38.071Z] CLI Version:   14.2.1
+[debug] [2025-04-25T16:58:38.072Z] Platform:      win32
+[debug] [2025-04-25T16:58:38.072Z] Node Version:  v20.19.0
+[debug] [2025-04-25T16:58:38.072Z] Time:          Fri Apr 25 2025 11:58:38 GMT-0500 (hora estándar de Colombia)
+[debug] [2025-04-25T16:58:38.072Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-04-25T16:58:38.082Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-04-25T16:58:38.082Z] > authorizing via signed-in user (usb.llavero.julio@gmail.com)
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\LicenseFinanceManager
+
+Before we get started, keep in mind:
+
+  * You are currently outside your home directory
+
